@@ -4,7 +4,7 @@
 Last night I got Kubernetes running on Docker for Mac.
 
 I'm not sure if this is evil or not yet. Certainly both the Docker and Kubernetes teams tell you
-not to do it. So. Use at your own risk. ¯\\_(ツ)_/¯
+not to do it. So. Use at your own risk. `¯\_(ツ)_/¯`
 
 ## How do?
 
@@ -14,6 +14,8 @@ this script totally hoses your Docker VM and you need to start over. Then:
 ```
 docker run --rm --privileged -v /:/rootfs streamplace/kube-for-mac
 ```
+
+Be aware that this will create ~15 Docker containers on your Docker for Mac. Because Kubernetes.
 
 ## Now what?
 
