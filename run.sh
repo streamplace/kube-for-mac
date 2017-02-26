@@ -63,4 +63,4 @@ onVM docker run \
   verb/socat \
     TCP-LISTEN:8080,fork UNIX-CONNECT:/hostrun/kubernetes.sock
 
-bigLog "Done. Give it like three minutes than see if you can curl localhost:8080."
+bigLog "Done. Give it like three minutes than see if you can curl localhost:8888."
