@@ -51,6 +51,8 @@ onVM docker run \
     --cluster-domain=cluster.local \
     --allow-privileged=true --v=2
 
+onVM rm -rf /tmp/kubernetes.sock
+
 bigLog "Running proxy part one..."
 onVM docker run \
   --name=k8s-proxy-1 \
