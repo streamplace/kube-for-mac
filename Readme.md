@@ -28,7 +28,7 @@ Be aware that this will create ~15 Docker containers on your Docker for Mac. Bec
 ## Now what?
 
 Because the Kubernetes server takes over port 8080 on the Docker VM, we can't easily forward local
-port 8080 to your local Kubernetes cluster. So you might wanna throw this in your `~/.kube/config`:
+port 8080 to your local Kubernetes cluster, and we run on port 8888 instead. So you might wanna throw this in your `~/.kube/config`:
 
 ```
 apiVersion: v1
