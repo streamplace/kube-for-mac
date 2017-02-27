@@ -22,6 +22,12 @@ onVM mkdir -p /var/lib/kubelet
 onVM mount -o bind /var/lib/kubelet /var/lib/kubelet
 onVM mount --make-shared /var/lib/kubelet
 
+bigLog "Removing stale containers..."
+containers="kubelet k8s-proxy-1 k8s-proxy-2"
+for container in $containers; do
+  onVM docker rm -f $container
+done
+
 bigLog "Starting kubelet..."
 onVM docker run \
   --net=host \
