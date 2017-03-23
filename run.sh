@@ -1,13 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
-onVM() {
-  nsenter --mount=/rootfs/proc/1/ns/mnt -- $*
-}
+set -o errexit
+set -o nounset
+set -o pipefail
 
-bigLog() {
-  echo ""
-  echo ">>>>>>> " $*
-}
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source "$DIR/common.sh"
 
 bigLog "Adding necessary dependency findmnt..."
 onVM apk update
@@ -25,7 +23,7 @@ onVM mount --make-shared /var/lib/kubelet
 bigLog "Removing stale containers..."
 containers="kubelet k8s-proxy-1 k8s-proxy-2"
 for container in $containers; do
-  onVM docker rm -f $container
+  onVM docker rm -f $container > /dev/null || echo "No need to clean up $container"
 done
 
 bigLog "Starting kubelet..."
@@ -40,7 +38,7 @@ onVM docker run \
   --volume=/var/lib/kubelet/:/var/lib/kubelet:shared \
   --name=kubelet \
   -d \
-  gcr.io/google_containers/hyperkube-amd64:v${K8S_VERSION:-1.5.3} \
+  gcr.io/google_containers/hyperkube-amd64:v${K8S_VERSION:-1.5.5} \
   /hyperkube kubelet \
     --address="0.0.0.0" \
     --containerized \
@@ -71,4 +69,8 @@ onVM docker run \
   verb/socat \
     TCP-LISTEN:8080,fork UNIX-CONNECT:/hostrun/kubernetes.sock
 
+
 bigLog "Done. Give it like three minutes than see if you can curl localhost:8888."
+
+bigLog "This container has to keep running because of a strange kube-for-mac file watching bug. https://git.io/vSejZ"
+tail -f /dev/null

@@ -20,7 +20,7 @@ I also like to beef up Docker's resource allocations first if I'm planning on do
 Then:
 
 ```
-docker run --rm --privileged -v /:/rootfs streamplace/kube-for-mac
+docker run --rm --privileged -v /:/rootfs -v /Users:/Users -d streamplace/kube-for-mac
 ```
 
 Be aware that this will create ~15 Docker containers on your Docker for Mac. Because Kubernetes.
