@@ -34,8 +34,8 @@ for container in $allContainers; do
 done
 
 bigLog "Removing all kubelet mounts"
-allMounts="$(onVM mount | grep kubelet || true)"
-mounts="$(echo $allMounts | awk '{print $3;}' | sort | uniq)"
+allMounts="$(onVM mount | awk '{print $3;}' | grep kubelet || true)"
+mounts="$(echo $allMounts | sort | uniq)"
 for thisMount in $mounts; do
   onVM umount "$thisMount"
 done

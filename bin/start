@@ -7,9 +7,11 @@ set -o pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$DIR/common.sh"
 
-bigLog "Adding necessary dependency findmnt..."
-onVM apk update
-onVM apk add findmnt
+if ! onVM which findmnt; then
+  bigLog "Adding necessary dependency findmnt..."
+  onVM apk update
+  onVM apk add findmnt
+fi
 
 # I have no idea why this is, but once kubelet starts running it expects mount to be at /mount.
 bigLog "Copying mount for poorly-understood reasons..."
