@@ -21,8 +21,8 @@ onVM mount -o bind /var/lib/kubelet /var/lib/kubelet
 onVM mount --make-shared /var/lib/kubelet
 
 bigLog "Removing stale containers..."
-containers="kubelet k8s-proxy-1 k8s-proxy-2"
-for container in $containers; do
+
+for container in $CONTAINER_NAMES; do
   onVM docker rm -f $container > /dev/null || echo "No need to clean up $container"
 done
 

@@ -7,3 +7,38 @@ set -o pipefail
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$DIR/common.sh"
 
+bigLog "Deleting Kubernetes cluster..."
+
+for container in $CONTAINER_NAMES; do
+  docker rm -f $container || echo "No need to clean up $container"
+done
+
+# For the remaining containers, make sure we kill any that are using streamplace/kube-for-mac
+
+bigLog "Deleting all kubernetes containers..."
+kubeContainers="$(docker ps -a --format '{{.Names}}' | grep '^k8s_' || true)"
+
+for container in $kubeContainers; do
+  docker rm -f "$container"
+done
+
+bigLog "Deleting kube-for-mac startup container..."
+# Don't delete ourselves in this process, lol
+allContainers="$(docker ps --format '{{.ID}}' | grep -v $HOSTNAME || true)"
+for container in $allContainers; do
+  json="$(docker inspect $container)"
+  image="$(echo $json | jq -r '.[].Config.Image')"
+  if echo $image | grep 'kube-for-mac'; then
+    docker rm -f "$container"
+  fi
+done
+
+bigLog "Removing all kubelet mounts"
+allMounts="$(onVM mount | grep kubelet || true)"
+mounts="$(echo $allMounts | awk '{print $3;}' | sort | uniq)"
+for thisMount in $mounts; do
+  onVM umount "$thisMount"
+done
+
+bigLog "Removing /var/lib/kubelet"
+onVM rm -rf /var/lib/kubelet

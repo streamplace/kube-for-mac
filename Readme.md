@@ -6,7 +6,7 @@ Last night I got Kubernetes running on Docker for Mac.
 I'm not sure if this is evil or not yet. Certainly both the Docker and Kubernetes teams tell you
 not to do it. So. Use at your own risk. `¯\_(ツ)_/¯`
 
-## How do?
+## Installing
 
 I like to start with a Docker factory reset first. Because then you know where the button is when
 this script totally hoses your Docker VM and you need to start over.
@@ -24,6 +24,17 @@ docker run --rm --privileged -v /:/rootfs -v /Users:/Users -d streamplace/kube-f
 ```
 
 Be aware that this will create ~15 Docker containers on your Docker for Mac. Because Kubernetes.
+
+## Uninstalling
+
+Reboot Docker for Mac. Then:
+
+```
+docker run --rm --privileged -v /:/rootfs streamplace/kube-for-mac stop
+```
+
+That should delete all the Kubernetes-related stuff from the VM, while leaving the Docker VM
+intact.
 
 ## Now what?
 
