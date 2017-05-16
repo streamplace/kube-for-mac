@@ -2,10 +2,10 @@
 
 if [ x"$1" = 'xPRESTART' ] ; then
   # tell user we are here
-  echo "Hacking at Docker Alpine... "
+  echo "Hacking at Docker Alpine..."
 
   # create folder on alpine docker
-  echo "Create folder on Docker Alpine... "
+  echo "Create folder on Docker Alpine..."
   onVM mkdir -p "/etc/hacks/v$K8S_VERSION/kubelet/etc/kubernetes/manifests"
 
   # the only way I can find to override the master.json file
@@ -15,8 +15,14 @@ if [ x"$1" = 'xPRESTART' ] ; then
   # cat it out
   echo "Cat master.json override..."
   onVM cat "/etc/hacks/v$K8S_VERSION/kubelet/etc/kubernetes/manifests/master.json"
+fi
 
-  #echo "Sleep for a while..."
-  #sleep 10000
+if [ x"$1" = 'xCLEANUP' ] ; then
+  # tell user we are here
+  echo "Cleanup Docker Alpine folder..."
+
+  # create folder on alpine docker
+  echo "Remove our specific hacks folder..."
+  onVM rm -fR /etc/hacks
 fi
 

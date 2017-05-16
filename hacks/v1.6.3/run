@@ -17,7 +17,7 @@ export DOCKER_KUBE_FOR_MAC_DOCKER_ARGS="--volume /etc/hacks/v$DOCKER_KUBE_FOR_MA
   # k8s v1.6 requires cgroups which are not compatible with Docker for Mac
 export DOCKER_KUBE_FOR_MAC_KUBELET_ARGS='--cgroups-per-qos=false --enforce-node-allocatable=""'
   # specific hack script to force apiserver to use etcd v2
-export DOCKER_KUBE_FOR_MAC_K8S_HACKS='"/etc/hacks-in/hacks.sh"'
+export DOCKER_KUBE_FOR_MAC_K8S_HACKS='/etc/hacks-in/hacks.sh'
 
 # call whatever was passed in
 eval "$@"

@@ -5,7 +5,7 @@
 
 ########################################################################
 # globals
-g_DOCKER_KUBE_FOR_MAC_IMAGE="${DOCKER_KUBE_FOR_MAC_IMAGE:-dockerregistry.hlsdev.local:5000/hlsdev/kube-for-mac:1.0}"
+g_DOCKER_KUBE_FOR_MAC_IMAGE="${DOCKER_KUBE_FOR_MAC_IMAGE:-streamplace/kube-for-mac:latest}"
 g_DOCKER_KUBE_FOR_MAC_K8S_VERSION="${DOCKER_KUBE_FOR_MAC_K8S_VERSION:-1.5.7}"
 g_DOCKER_KUBE_FOR_MAC_DOCKER_ARGS="${DOCKER_KUBE_FOR_MAC_DOCKER_ARGS}"
 g_DOCKER_KUBE_FOR_MAC_KUBELET_ARGS="${DOCKER_KUBE_FOR_MAC_KUBELET_ARGS}"
@@ -24,19 +24,19 @@ function run-docker-kube-for-mac-x-start {
   local LOCAL_K8S_HACKS="$g_DOCKER_KUBE_FOR_MAC_K8S_HACKS"
 
   echo 'Starting kube-for-mac...'
-  local l_docker_run="/tmp/$$.dockerrun"
+  local l_docker_run="/tmp/kube-for-mac-$$.start"
   echo "docker run --privileged -v /:/rootfs -v /Users:/Users \\" > "$l_docker_run"
-	[ x"$g_DOCKER_KUBE_FOR_MAC_LOCAL_DOCKER_ARGS" != x ] && echo "  $g_DOCKER_KUBE_FOR_MAC_LOCAL_DOCKER_ARGS \\" >> "$l_docker_run"
+  [ x"$g_DOCKER_KUBE_FOR_MAC_LOCAL_DOCKER_ARGS" != x ] && echo "  $g_DOCKER_KUBE_FOR_MAC_LOCAL_DOCKER_ARGS \\" >> "$l_docker_run"
   echo "  -d --name run-docker-kube-for-mac-start \\" >> "$l_docker_run"
   echo "  -e DOCKER_ARGS=\"$LOCAL_DOCKER_ARGS\" \\" >> "$l_docker_run"
   echo "  -e K8S_VERSION=$g_DOCKER_KUBE_FOR_MAC_K8S_VERSION \\" >> "$l_docker_run"
   echo "  -e KUBELET_ARGS=\"$LOCAL_KUBELET_ARGS\" \\" >> "$l_docker_run"
   echo "  -e K8S_HACKS=\"$LOCAL_K8S_HACKS\" \\" >> "$l_docker_run"
   echo "  $g_DOCKER_KUBE_FOR_MAC_IMAGE" >> "$l_docker_run"
-	cat "$l_docker_run"
-	source "$l_docker_run"
+  cat "$l_docker_run"
+  source "$l_docker_run"
   local l_rc=$?
-	rm -f "$l_docker_run"
+  rm -f "$l_docker_run"
 set +x
   [ $l_rc -ne 0 ] && return $l_rc
   echo -n 'Wait for start: '
@@ -76,11 +76,22 @@ set +x
 ########################################################################
 # stop
 function run-docker-kube-for-mac-x-stop {
+  local l_docker_run="/tmp/kube-for-mac-$$.stop"
+
+  # allow overrides
+  local LOCAL_K8S_HACKS="$g_DOCKER_KUBE_FOR_MAC_K8S_HACKS"
+
   echo 'Stopping kube-for-mac...'
-  docker run --rm --privileged -v /:/rootfs -v /Users:/Users \
-    -d --name=run-docker-kube-for-mac-stop \
-    $g_DOCKER_KUBE_FOR_MAC_IMAGE stop
+  echo "docker run --privileged -v /:/rootfs -v /Users:/Users \\" > "$l_docker_run"
+  [ x"$g_DOCKER_KUBE_FOR_MAC_LOCAL_DOCKER_ARGS" != x ] && echo "  $g_DOCKER_KUBE_FOR_MAC_LOCAL_DOCKER_ARGS \\" >> "$l_docker_run"
+  echo "  -d --name run-docker-kube-for-mac-stop \\" >> "$l_docker_run"
+  echo "  -e K8S_VERSION=$g_DOCKER_KUBE_FOR_MAC_K8S_VERSION \\" >> "$l_docker_run"
+  echo "  -e K8S_HACKS=\"$LOCAL_K8S_HACKS\" \\" >> "$l_docker_run"
+  echo "  $g_DOCKER_KUBE_FOR_MAC_IMAGE stop" >> "$l_docker_run"
+  cat "$l_docker_run"
+  source "$l_docker_run"
   local l_rc=$?
+  rm -f "$l_docker_run"
   [ $l_rc -ne 0 ] && return $l_rc
   echo -n 'Wait for stop: '
   local l_container_id=''
@@ -95,6 +106,8 @@ function run-docker-kube-for-mac-x-stop {
   done
   [ x"$l_container_id" != x ] && echo '**TIMEOUT**' && return 1
   echo 'OK'
+  docker logs run-docker-kube-for-mac-stop
+  docker rm --force run-docker-kube-for-mac-stop >/dev/null 2>&1
   l_container_id=$(docker ps --quiet --filter name=run-docker-kube-for-mac-start 2>/dev/null)
   if [ x"$l_container_id" != x ] ; then
     echo 'Remove kube-for-mac...'

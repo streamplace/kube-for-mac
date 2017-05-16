@@ -34,11 +34,19 @@ for container in $allContainers; do
 done
 
 bigLog "Removing all kubelet mounts"
-allMounts="$(onVM mount | awk '{print $3;}' | grep kubelet || true)"
-mounts="$(echo $allMounts | sort | uniq)"
-for thisMount in $mounts; do
+kubeletMounts="$(onVM mount | awk '{print $3;}' | grep kubelet | sort | uniq | sort -r)"
+for thisMount in $kubeletMounts; do
   onVM umount "$thisMount"
 done
 
 bigLog "Removing /var/lib/kubelet"
 onVM rm -rf /var/lib/kubelet
+
+# handle hacks (thanks, Kubernetes Authors)
+if [ x"$K8S_HACKS" != x ]; then
+  for i in $(echo "$K8S_HACKS") ; do
+    bigLog "Executing hack: '$i'"
+    source "$i" CLEANUP
+  done
+fi
+
