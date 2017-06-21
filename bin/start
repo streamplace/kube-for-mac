@@ -12,10 +12,25 @@ if ! onVM which findmnt; then
   onVM apk update
   onVM apk add findmnt
 fi
+if ! onVM which mount.nfs; then
+  bigLog "Adding necessary dependency mount.nfs..."
+  onVM apk update
+  onVM apk add nfs-utils
+fi
 
 # I have no idea why this is, but once kubelet starts running it expects mount to be at /mount.
 bigLog "Copying mount for poorly-understood reasons..."
-onVM cp /bin/mount /mount
+if ! onVM ls /mount 2>/dev/null ; then
+  #onVM cp /bin/mount /mount
+  nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo '#!/bin/sh' > /mount"
+  nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo 'if /bin/echo \"\$*\" | /bin/grep -q -e \"-t nfs\" ; then' >> /mount"
+  nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo '  the_good_value=\$(/bin/echo \"\$*\" | /bin/sed -e \"s/^\(.*\)-t nfs\(.*\)/\1-t nfs -o nolock \2/\")' >> /mount"
+  nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo '  eval /bin/mount \$the_good_value' >> /mount"
+  nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo 'else' >> /mount"
+  nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo '  eval /bin/mount \$*' >> /mount"
+  nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo 'fi' >> /mount"
+  onVM chmod +x /mount
+fi
 
 bigLog "Creating /var/lib/kubelet bind"
 onVM mkdir -p /var/lib/kubelet
@@ -28,28 +43,57 @@ for container in $CONTAINER_NAMES; do
   onVM docker rm -f $container > /dev/null || echo "No need to clean up $container"
 done
 
+# kubernetes version
+K8S_VERSION="${K8S_VERSION:-1.5.7}"
+
+my_start="/tmp/$$.my_start"
+bigLog "Writing $my_start..."
+cat > "$my_start" <<EOF
+onVM docker run \\
+  --net=host \\
+  --pid=host \\
+  --privileged \\
+  --volume=/:/rootfs:ro \\
+  --volume=/sys:/sys:ro \\
+  --volume=/var/run:/var/run:rw \\
+  --volume=/var/lib/docker/:/var/lib/docker:rw \\
+  --volume=/var/lib/kubelet/:/var/lib/kubelet:shared \\
+  --name=kubelet \\
+  -d \\
+  $DOCKER_ARGS \\
+  gcr.io/google_containers/hyperkube-amd64:v${K8S_VERSION} \\
+  /hyperkube kubelet \\
+    --address="0.0.0.0" \\
+    --containerized \\
+    --hostname-override="127.0.0.1" \\
+    --api-servers=http://localhost:8080 \\
+    --pod-manifest-path=/etc/kubernetes/manifests \\
+    --cluster-dns=10.0.0.10 \\
+    --cluster-domain=cluster.local \\
+    --allow-privileged=true --v=5 \\
+    $KUBELET_ARGS
+EOF
+cat "$my_start"
+
+# handle hacks (thanks, Kubernetes Authors)
+if [ x"$K8S_HACKS" != x ]; then
+  for i in $(echo "$K8S_HACKS") ; do
+    bigLog "Executing hack: '$i'"
+    source "$i" PRESTART
+  done
+fi
+
 bigLog "Starting kubelet..."
-onVM docker run \
-  --net=host \
-  --pid=host \
-  --privileged \
-  --volume=/:/rootfs:ro \
-  --volume=/sys:/sys:ro \
-  --volume=/var/run:/var/run:rw \
-  --volume=/var/lib/docker/:/var/lib/docker:rw \
-  --volume=/var/lib/kubelet/:/var/lib/kubelet:shared \
-  --name=kubelet \
-  -d \
-  gcr.io/google_containers/hyperkube-amd64:v${K8S_VERSION:-1.5.5} \
-  /hyperkube kubelet \
-    --address="0.0.0.0" \
-    --containerized \
-    --hostname-override="127.0.0.1" \
-    --api-servers=http://localhost:8080 \
-    --pod-manifest-path=/etc/kubernetes/manifests \
-    --cluster-dns=10.0.0.10 \
-    --cluster-domain=cluster.local \
-    --allow-privileged=true --v=2
+source "$my_start"
+rm -f "$my_start"
+
+# handle hacks (thanks, Kubernetes Authors)
+if [ x"$K8S_HACKS" != x ]; then
+  for i in $(echo "$K8S_HACKS") ; do
+    bigLog "Executing hack: '$i'"
+    source "$i" POSTSTART
+  done
+fi
 
 onVM rm -rf /tmp/kubernetes.sock
 
@@ -76,3 +120,4 @@ bigLog "Done. Give it like three minutes than see if you can curl localhost:8888
 
 bigLog "This container has to keep running because of a strange kube-for-mac file watching bug. https://git.io/vSejZ"
 tail -f /dev/null
+
