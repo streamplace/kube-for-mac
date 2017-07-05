@@ -27,10 +27,10 @@ if [ x"$1" = 'xPRESTART' ] ; then
 
   # v1.7.0: addons are not deployed (DNS / dashboard). [urp]
   echo "Copy kube-addon-manager manifests (initial)..."
-  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/dashboard-service.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/dashboard-service.yaml" 
-  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/kubedns-cm.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/kubedns-cm.yaml" 
-  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/kubedns-sa.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/kubedns-sa.yaml" 
-  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/kubedns-svc.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/kubedns-svc.yaml" 
+  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/dashboard-service.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/dashboard-service.yaml"
+  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/kubedns-cm.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/kubedns-cm.yaml"
+  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/kubedns-sa.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/kubedns-sa.yaml"
+  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/kubedns-svc.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/kubedns-svc.yaml"
   echo "Cannot deploy DNS/Dashboard addon controllers now...use DEPLOY-ADDONS option"
 fi
 
@@ -57,7 +57,7 @@ if [ x"$1" = 'xDEPLOY-ADDONS' ] ; then
   sleep 120
 
   echo 'Deploy DNS...'
-  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/kubedns-controller.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/kubedns-controller.yaml" 
+  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/kubedns-controller.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/kubedns-controller.yaml"
   echo -n 'Wait: '
   the_ctr=0
   the_timeout=60
@@ -81,7 +81,7 @@ if [ x"$1" = 'xDEPLOY-ADDONS' ] ; then
 
   # we won't wait for this...just do it
   echo -n 'Deploy Dashboard: '
-  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/dashboard-controller.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/dashboard-controller.yaml" 
+  copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/dashboard-controller.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/dashboard-controller.yaml"
   echo 'OK'
 fi
 

@@ -112,7 +112,7 @@ function docker-kube-for-mac-x-start {
 
   return 0
 }
- 
+
 ########################################################################
 # stop
 function docker-kube-for-mac-x-stop {
@@ -161,7 +161,7 @@ function docker-kube-for-mac-x-stop {
   fi
   return 0
 }
- 
+
 ########################################################################
 # restart
 function docker-kube-for-mac-x-restart {
@@ -169,7 +169,7 @@ function docker-kube-for-mac-x-restart {
   sleep 3
   docker-kube-for-mac-x-start
 }
- 
+
 ########################################################################
 # custom operation
 function docker-kube-for-mac-x-custom {
@@ -199,7 +199,7 @@ function docker-kube-for-mac-x-custom {
   [ $l_rc -ne 0 ] && return $l_rc
   return 0
 }
- 
+
 ########################################################################
 # optional call support
 l_do_run=0

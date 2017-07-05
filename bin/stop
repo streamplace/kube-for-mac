@@ -8,20 +8,20 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$DIR/common.sh"
 
 bigLog "Deleting Kubernetes cluster..."
-  
+
 for container in $CONTAINER_NAMES; do
   docker rm -f $container || echo "No need to clean up $container"
 done
 
 # For the remaining containers, make sure we kill any that are using streamplace/kube-for-mac
-  
+
 bigLog "Deleting all kubernetes containers..."
 kubeContainers="$(docker ps -a --format '{{.Names}}' | grep '^k8s_' || true)"
 
 for container in $kubeContainers; do
   docker rm -f "$container"
-done 
-  
+done
+
 bigLog "Deleting kube-for-mac startup container..."
 # Don't delete ourselves in this process, lol
 allContainers="$(docker ps --format '{{.ID}}' | grep -v $HOSTNAME || true)"
@@ -47,7 +47,7 @@ while [ $the_ctr -lt $the_max ] ; do
   [ x"$kubeletMounts" = x ] && break || true
 done
 
-bigLog "Removing /var/lib/kubelet" 
+bigLog "Removing /var/lib/kubelet"
 onVM rm -Rf /var/lib/kubelet
 
 # handle hacks (thanks, Kubernetes Authors)
@@ -55,6 +55,6 @@ if [ x"$K8S_HACKS" != x ]; then
   for i in $(echo "$K8S_HACKS") ; do
     bigLog "Executing hack: '$i'"
     source "$i" CLEANUP
-  done 
+  done
 fi
 
