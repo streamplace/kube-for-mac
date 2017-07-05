@@ -18,10 +18,13 @@ if ! onVM which mount.nfs; then
   onVM apk add nfs-utils
 fi
 
-# I have no idea why this is, but once kubelet starts running it expects mount to be at /mount.
+# /mount must be available in context of kubelet VM's root.
+# because k8s mounts host filesystem to kubelet, this means
+# that certain binaries *must* be on the host root.
 bigLog "Copying mount for poorly-understood reasons..."
 if ! onVM ls /mount 2>/dev/null ; then
   #onVM cp /bin/mount /mount
+  # additionally - we need to account for NFS
   nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo '#!/bin/sh' > /mount"
   nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo 'if /bin/echo \"\$*\" | /bin/grep -q -e \"-t nfs\" ; then' >> /mount"
   nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo '  the_good_value=\$(/bin/echo \"\$*\" | /bin/sed -e \"s/^\(.*\)-t nfs\(.*\)/\1-t nfs -o nolock \2/\")' >> /mount"
@@ -30,6 +33,9 @@ if ! onVM ls /mount 2>/dev/null ; then
   nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo '  eval /bin/mount \$*' >> /mount"
   nsenter --mount=/rootfs/proc/1/ns/mnt -- ash -c "echo 'fi' >> /mount"
   onVM chmod +x /mount
+fi
+if ! onVM ls /umount 2>/dev/null ; then
+  onVM cp /bin/umount /umount
 fi
 
 bigLog "Creating /var/lib/kubelet bind"

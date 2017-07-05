@@ -64,39 +64,86 @@ users:
 
 It's a handy shell script that fires up the whole thing for you.
 
-And it is designed to account for - er, um - "improvements" to Kubernetes.
+And it is designed to account for the ever-evolving nature of Kubernetes.
 
-Such as 1.6.3 that out-of-the-box guarantees breakage (if for nothing else the fact that API Server has a new default of etcd version 3 - while the out-of-the-box kubelet still builds etcd version 2).
+Such as 1.7.0 that no longer creates any of the manifests / addons that 1.6.x and prior versions did.
 
-First, let's start everything with the v1.6.3 hacks:
+First, get a watcher up and running in another window:
 ```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ ./hacks/v1.6.3/run ./run-docker-kube-for-mac.sh start
+watch -n 4 -d kubectl get all --all-namespaces -o wide
+```
+
+There will be no output until we start a Kubernetes cluster. So let's do that now with the v1.7.0 hacks:
+```
+CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ ./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh start
 Starting kube-for-mac...
-docker run --privileged -v /:/rootfs -v /Users:/Users \
-  --volume /Users/l.abruce/proj/docker/sab/kube-for-mac/hacks/v1.6.3:/etc/hacks-in:ro \
-  -d --name run-docker-kube-for-mac-start \
-  -e DOCKER_ARGS="--volume /etc/hacks/v1.6.3/kubelet/etc/kubernetes/manifests/master.json:/etc/kubernetes/manifests/master.json:ro" \
-  -e K8S_VERSION=1.6.3 \
-  -e KUBELET_ARGS="--cgroups-per-qos=false --enforce-node-allocatable=""" \
+docker run --privileged -v /:/rootfs -v /Users:/Users --net=host \
+  --volume /Users/l.abruce/proj/git/github.com/andybrucenet/kube-for-mac/hacks/v1.7.0:/etc/hacks-in:ro \
+  -d --name docker-kube-for-mac-start \
+  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.0/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro" \
+  -e K8S_VERSION=1.7.0 \
+  -e KUBELET_ARGS="--cgroups-per-qos=false --enforce-node-allocatable='' --cpu-cfs-quota=false" \
   -e K8S_HACKS="/etc/hacks-in/hacks.sh" \
   streamplace/kube-for-mac:latest
-228415e9cfea0905d2d4ab497c57264ef0c25b7e2457ef7f5807add2e76b110b
-Wait for start: .OK
+9f8d1e5d3a28993785dba913da00387e32cb7cab3424ae3799c880336801f51f
+Wait for start: ..OK
 Wait for server: ..OK
 ```
 
-This starts all of the required containers. Let's take a look at what got created:
+This starts the basic set of required containers. Wait a couple of minutes and take a look at what got created:
 ```
 CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl get ns
 NAME          STATUS    AGE
-default       Active    21s
-kube-public   Active    20s
-kube-system   Active    21s
+default       Active    1m
+kube-public   Active    1m
+kube-system   Active    1m
+CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl --namespace=kube-system get pods
+NAME                           READY     STATUS    RESTARTS   AGE
+k8s-etcd-127.0.0.1             1/1       Running   0          17s
+k8s-master-127.0.0.1           3/3       Running   0          13s
+k8s-proxy-127.0.0.1            1/1       Running   0          21s
+kube-addon-manager-127.0.0.1   1/1       Running   0          27s
+```
+
+*Whoa* - the above doesn't show any DNS or Dashboard. What the fudge?
+With K8s v1.7.0, things don't get auto-created like they used to. So we have an additional task to run:
+```
+CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ ./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh custom source /etc/hacks-in/hacks.sh DEPLOY-ADDONS
+Running custom kube-for-mac...
+docker run --rm --privileged -v /:/rootfs -v /Users:/Users --net=host \
+  --volume /Users/l.abruce/proj/git/github.com/andybrucenet/kube-for-mac/hacks/v1.7.0:/etc/hacks-in:ro \
+  -d --name docker-kube-for-mac-custom \
+  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.0/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro" \
+  -e K8S_VERSION=1.7.0 \
+  -e KUBELET_ARGS="--cgroups-per-qos=false --enforce-node-allocatable='' --cpu-cfs-quota=false" \
+  -e K8S_HACKS="/etc/hacks-in/hacks.sh" \
+  streamplace/kube-for-mac:latest custom \
+  source /etc/hacks-in/hacks.sh DEPLOY-ADDONS
+1f11281e3c21965ecf4cac7e6ec03d5a7f84460031361503bab49cf5945b6a4f
+```
+
+DNS and the Dashboard will take a few minutes to initialize. You can see the progress by watching the Docker logs:
+```
+CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ docker logs -f docker-kube-for-mac-custom
+Wait for kube-addon-manager...
+OK
+Sleeping for 120 seconds...
+Deploy DNS...
+Wait: ...........OK
+Sleeping for 90 seconds...
+Deploy Dashboard: OK
+```
+
+And now we have everything we need :)
+```
 CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl --namespace=kube-system get pods
 NAME                                    READY     STATUS    RESTARTS   AGE
-k8s-master-127.0.0.1                    4/4       Running   1          26s
-kube-dns-806549836-78b1t                3/3       Running   0          20s
-kubernetes-dashboard-2917854236-bmrws   1/1       Running   0          21s
+k8s-etcd-127.0.0.1                      1/1       Running   0          6m
+k8s-master-127.0.0.1                    3/3       Running   0          6m
+k8s-proxy-127.0.0.1                     1/1       Running   0          6m
+kube-addon-manager-127.0.0.1            1/1       Running   0          6m
+kube-dns-1994753994-js1bx               3/3       Running   0          2m
+kubernetes-dashboard-2037206258-m8gvj   1/1       Running   0          4s
 ```
 
 Let's run a simple container and verify that DNS works. (Which - just FYI - I cannot get to work with `kubeadm` on CentOS or Fedora. But does work here.)
@@ -119,18 +166,28 @@ NAME      READY     STATUS      RESTARTS   AGE
 busybox   0/1       Completed   0          18s
 ```
 
+Kill that pod:
+```
+CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl delete po/busybox
+pod "busybox" deleted
+CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl get pods --show-all
+No resources found.
+```
+
 Alright, I'm spent. Let's kill them all:
 ```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ ./hacks/v1.6.3/run ./run-docker-kube-for-mac.sh stop
+CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ ./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh stop
 Stopping kube-for-mac...
-docker run --privileged -v /:/rootfs -v /Users:/Users \
-  --volume /Users/l.abruce/proj/docker/sab/kube-for-mac/hacks/v1.6.3:/etc/hacks-in:ro \
-  -d --name run-docker-kube-for-mac-stop \
-  -e K8S_VERSION=1.6.3 \
+docker run --privileged -v /:/rootfs -v /Users:/Users --net=host \
+  --volume /Users/l.abruce/proj/git/github.com/andybrucenet/kube-for-mac/hacks/v1.7.0:/etc/hacks-in:ro \
+  -d --name docker-kube-for-mac-stop \
+  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.0/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro" \
+  -e K8S_VERSION=1.7.0 \
+  -e KUBELET_ARGS="--cgroups-per-qos=false --enforce-node-allocatable='' --cpu-cfs-quota=false" \
   -e K8S_HACKS="/etc/hacks-in/hacks.sh" \
   streamplace/kube-for-mac:latest stop
-1948d282576b90379c2abf7568aa1a649b2b45821130090209067a0ee9698462
-Wait for stop: ..........OK
+b5f15cd366d56b5f236a5124a145bb789a9fb5d4fac78c4168d420d508026e5c
+Wait for stop: ......OK
 
 >>>>>>>  Deleting Kubernetes cluster...
 kubelet
@@ -138,33 +195,33 @@ k8s-proxy-1
 k8s-proxy-2
 
 >>>>>>>  Deleting all kubernetes containers...
-k8s_busybox_busybox_default_b3b2e79c-3a35-11e7-869c-ba4b3ade41c6_0
-k8s_POD_busybox_default_b3b2e79c-3a35-11e7-869c-ba4b3ade41c6_0
-k8s_sidecar_kube-dns-806549836-78b1t_kube-system_8eda149b-3a35-11e7-869c-ba4b3ade41c6_0
-k8s_dnsmasq_kube-dns-806549836-78b1t_kube-system_8eda149b-3a35-11e7-869c-ba4b3ade41c6_0
-k8s_kubedns_kube-dns-806549836-78b1t_kube-system_8eda149b-3a35-11e7-869c-ba4b3ade41c6_0
-k8s_POD_kube-dns-806549836-78b1t_kube-system_8eda149b-3a35-11e7-869c-ba4b3ade41c6_0
-k8s_kubernetes-dashboard_kubernetes-dashboard-2917854236-bmrws_kube-system_8e283f9d-3a35-11e7-869c-ba4b3ade41c6_0
-k8s_POD_kubernetes-dashboard-2917854236-bmrws_kube-system_8e283f9d-3a35-11e7-869c-ba4b3ade41c6_0
-k8s_apiserver_k8s-master-127.0.0.1_kube-system_46406242b8e4a9b7dee0f580bce8311d_1
-k8s_setup_k8s-master-127.0.0.1_kube-system_46406242b8e4a9b7dee0f580bce8311d_0
-k8s_scheduler_k8s-master-127.0.0.1_kube-system_46406242b8e4a9b7dee0f580bce8311d_0
-k8s_kube-addon-manager-data_kube-addon-manager-127.0.0.1_kube-system_6d93f1030e8e9e6e27f07f918bada68b_0
-k8s_apiserver_k8s-master-127.0.0.1_kube-system_46406242b8e4a9b7dee0f580bce8311d_0
-k8s_etcd_k8s-etcd-127.0.0.1_kube-system_ce41cb65bfba8d0e5f2575acaa3816ca_0
-k8s_controller-manager_k8s-master-127.0.0.1_kube-system_46406242b8e4a9b7dee0f580bce8311d_0
-k8s_kube-addon-manager_kube-addon-manager-127.0.0.1_kube-system_6d93f1030e8e9e6e27f07f918bada68b_0
-k8s_kube-proxy_k8s-proxy-127.0.0.1_kube-system_d00ccc45519f37e0b496f8ba2ebc1354_0
-k8s_POD_k8s-etcd-127.0.0.1_kube-system_ce41cb65bfba8d0e5f2575acaa3816ca_0
-k8s_POD_kube-addon-manager-127.0.0.1_kube-system_6d93f1030e8e9e6e27f07f918bada68b_0
-k8s_POD_k8s-master-127.0.0.1_kube-system_46406242b8e4a9b7dee0f580bce8311d_0
-k8s_POD_k8s-proxy-127.0.0.1_kube-system_d00ccc45519f37e0b496f8ba2ebc1354_0
+k8s_busybox_busybox_default_062a5ef9-61a5-11e7-bfa3-b6f744b1340b_0
+k8s_POD_busybox_default_062a5ef9-61a5-11e7-bfa3-b6f744b1340b_0
+k8s_kubernetes-dashboard_kubernetes-dashboard-2037206258-m8gvj_kube-system_ea92787a-61a4-11e7-bfa3-b6f744b1340b_0
+k8s_POD_kubernetes-dashboard-2037206258-m8gvj_kube-system_ea92787a-61a4-11e7-bfa3-b6f744b1340b_0
+k8s_sidecar_kube-dns-1994753994-js1bx_kube-system_a35054fb-61a4-11e7-bfa3-b6f744b1340b_0
+k8s_dnsmasq_kube-dns-1994753994-js1bx_kube-system_a35054fb-61a4-11e7-bfa3-b6f744b1340b_0
+k8s_kubedns_kube-dns-1994753994-js1bx_kube-system_a35054fb-61a4-11e7-bfa3-b6f744b1340b_0
+k8s_POD_kube-dns-1994753994-js1bx_kube-system_a35054fb-61a4-11e7-bfa3-b6f744b1340b_0
+k8s_scheduler_k8s-master-127.0.0.1_kube-system_2067adabaa6980daef0907659b4a9544_0
+k8s_apiserver_k8s-master-127.0.0.1_kube-system_2067adabaa6980daef0907659b4a9544_0
+k8s_controller-manager_k8s-master-127.0.0.1_kube-system_2067adabaa6980daef0907659b4a9544_0
+k8s_etcd_k8s-etcd-127.0.0.1_kube-system_bd1728a15ee1a9086d495f51c96057ca_0
+k8s_kube-addon-manager_kube-addon-manager-127.0.0.1_kube-system_4c08b13eef6cddbcdd31605f3d9b08c6_0
+k8s_kube-proxy_k8s-proxy-127.0.0.1_kube-system_93847eaf8fd3e196f07d899037b1b143_0
+k8s_POD_k8s-master-127.0.0.1_kube-system_2067adabaa6980daef0907659b4a9544_0
+k8s_POD_k8s-etcd-127.0.0.1_kube-system_bd1728a15ee1a9086d495f51c96057ca_0
+k8s_POD_kube-addon-manager-127.0.0.1_kube-system_4c08b13eef6cddbcdd31605f3d9b08c6_0
+k8s_POD_k8s-proxy-127.0.0.1_kube-system_93847eaf8fd3e196f07d899037b1b143_0
 
 >>>>>>>  Deleting kube-for-mac startup container...
-streamplace/kube-for-mac:latest
-228415e9cfea
+/docker-kube-for-mac-start
+9f8d1e5d3a28
 
->>>>>>>  Removing all kubelet mounts
+>>>>>>>  Removing all kubelet mounts (account for ordering)
+Removing mount: /var/lib/kubelet/pods/ea92787a-61a4-11e7-bfa3-b6f744b1340b/volumes/kubernetes.io~secret/default-token-91ng7
+Removing mount: /var/lib/kubelet/pods/a35054fb-61a4-11e7-bfa3-b6f744b1340b/volumes/kubernetes.io~secret/kube-dns-token-9l4mq
+Removing mount: /var/lib/kubelet
 
 >>>>>>>  Removing /var/lib/kubelet
 
@@ -173,4 +230,7 @@ Cleanup Docker Alpine folder...
 Remove our specific hacks folder...
 ```
 
+Your Docker for Mac is now back to its original state. You can create another K8s cluster, or do any other work you wish.
+
 That is all.
+
