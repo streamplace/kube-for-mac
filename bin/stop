@@ -27,20 +27,28 @@ bigLog "Deleting kube-for-mac startup container..."
 allContainers="$(docker ps --format '{{.ID}}' | grep -v $HOSTNAME || true)"
 for container in $allContainers; do
   json="$(docker inspect $container)"
-  image="$(echo $json | jq -r '.[].Config.Image')"
-  if echo $image | grep 'kube-for-mac'; then
+  image="$(echo $json | jq -r '.[].Name')"
+  if echo $image | grep 'kube-for-mac-start'; then
     docker rm -f "$container"
   fi
 done
 
-bigLog "Removing all kubelet mounts"
-kubeletMounts="$(onVM mount | awk '{print $3;}' | grep kubelet | sort | uniq | sort -r)"
-for thisMount in $kubeletMounts; do
-  onVM umount "$thisMount"
+bigLog "Removing all kubelet mounts (account for ordering)"
+the_ctr=0
+the_max=5
+while [ $the_ctr -lt $the_max ] ; do
+  the_ctr=$((the_ctr + 1))
+  kubeletMounts="$(onVM mount | awk '{print $3;}' | grep kubelet | sort | uniq | sort -r || true)"
+  for thisMount in $kubeletMounts; do
+    echo "Removing mount: $thisMount"
+    onVM umount "$thisMount" || true
+  done
+  kubeletMounts="$(onVM mount | awk '{print $3;}' | grep kubelet | sort | uniq | sort -r || true)"
+  [ x"$kubeletMounts" = x ] && break || true
 done
 
 bigLog "Removing /var/lib/kubelet"
-onVM rm -rf /var/lib/kubelet
+onVM rm -Rf /var/lib/kubelet
 
 # handle hacks (thanks, Kubernetes Authors)
 if [ x"$K8S_HACKS" != x ]; then

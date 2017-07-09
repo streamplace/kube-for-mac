@@ -7,15 +7,15 @@ cd "$g_SCRIPT_FOLDER_RELATIVE"
 g_SCRIPT_FOLDER_ABSOLUTE="$(pwd)"
 cd "$g_CURDIR"
 
-# hacks to get Kubernetes 1.6.3 to work
+# hacks to get Kubernetes 1.7.0 to work
   # local invocation - map the hacks folder for the initial start script
 export DOCKER_KUBE_FOR_MAC_LOCAL_DOCKER_ARGS="--volume $g_SCRIPT_FOLDER_ABSOLUTE:/etc/hacks-in:ro"
   # the kubernetes version to instantiate
-export DOCKER_KUBE_FOR_MAC_K8S_VERSION=1.6.3
+export DOCKER_KUBE_FOR_MAC_K8S_VERSION=1.7.0
   # tell invoked docker to mount the hacks passed in to us
-export DOCKER_KUBE_FOR_MAC_DOCKER_ARGS="--volume /etc/hacks/v$DOCKER_KUBE_FOR_MAC_K8S_VERSION/kubelet/etc/kubernetes/manifests/master.json:/etc/kubernetes/manifests/master.json:ro"
-  # k8s v1.6 requires cgroups which are not compatible with Docker for Mac
-export DOCKER_KUBE_FOR_MAC_KUBELET_ARGS='--cgroups-per-qos=false --enforce-node-allocatable=""'
+export DOCKER_KUBE_FOR_MAC_DOCKER_ARGS="--volume /etc/hacks/v$DOCKER_KUBE_FOR_MAC_K8S_VERSION/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro"
+  # k8s v1.7 requires cgroups which are not compatible with Docker for Mac
+export DOCKER_KUBE_FOR_MAC_KUBELET_ARGS="--cgroups-per-qos=false --enforce-node-allocatable='' --cpu-cfs-quota=false"
   # specific hack script to force apiserver to use etcd v2
 export DOCKER_KUBE_FOR_MAC_K8S_HACKS='/etc/hacks-in/hacks.sh'
 
