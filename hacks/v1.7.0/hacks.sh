@@ -53,8 +53,8 @@ if [ x"$1" = 'xDEPLOY-ADDONS' ] ; then
   done
   [ x"$the_addon_mgr" = x ] && echo '***TIMEOUT***' && exit 1
   echo 'OK'
-  echo 'Sleeping for 120 seconds...'
-  sleep 120
+  # echo 'Sleeping for 120 seconds...'
+  # sleep 120
 
   echo 'Deploy DNS...'
   copyFile '/etc/hacks-in/kube-addon-manager/etc/kubernetes/addons/kubedns-controller.yaml' "/etc/hacks/v$K8S_VERSION/kube-addon-manager/etc/kubernetes/addons/kubedns-controller.yaml"
@@ -76,8 +76,8 @@ if [ x"$1" = 'xDEPLOY-ADDONS' ] ; then
   done
   [ x"$the_dns" = x ] && echo '***TIMEOUT***' && exit 1
   echo 'OK'
-  echo 'Sleeping for 90 seconds...'
-  sleep 90
+  # echo 'Sleeping for 90 seconds...'
+  # sleep 90
 
   # we won't wait for this...just do it
   echo -n 'Deploy Dashboard: '

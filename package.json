@@ -1,0 +1,32 @@
+{
+  "name": "kube-for-mac",
+  "version": "0.1.0",
+  "description": "Kubernetes for Docker for Mac",
+  "main": "run-docker-kube-for-mac.sh",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npm run start-cluster && npm run deploy-addons",
+    "start-cluster": "bash -c './hacks/v1.7.0/run ./run-docker-kube-for-mac.sh start'",
+    "destroy": "./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh stop",
+    "deploy-addons": "./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh custom source /etc/hacks-in/hacks.sh DEPLOY-ADDONS"
+  },
+  "bin": {
+    "kube-for-mac": "cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/streamplace/kube-for-mac.git"
+  },
+  "keywords": [
+    "Streamplace"
+  ],
+  "author": "Streamplace",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/streamplace/kube-for-mac/issues"
+  },
+  "homepage": "https://github.com/streamplace/kube-for-mac#readme",
+  "dependencies": {
+    "yargs": "^8.0.2"
+  }
+}
