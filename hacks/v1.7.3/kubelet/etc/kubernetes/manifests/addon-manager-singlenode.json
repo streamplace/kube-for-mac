@@ -1,0 +1,40 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "kube-addon-manager",
+    "namespace": "kube-system",
+    "version": "v1"
+  },
+  "spec": {
+    "hostNetwork": true,
+    "containers": [
+      {
+        "name": "kube-addon-manager",
+        "image": "gcr.io/google_containers/kube-addon-manager-amd64:v6.4-beta.2",
+        "resources": {
+          "requests": {
+            "cpu": "5m",
+            "memory": "50Mi"
+          }
+        },
+        "volumeMounts": [
+          {
+            "name": "addons",
+            "mountPath": "/etc/kubernetes/addons",
+            "readOnly": true
+          }
+        ]
+      }
+    ],
+    "volumes":[
+      {
+        "name": "addons",
+        "hostPath": {
+          "path": "/etc/hacks/v1.7.3/kube-addon-manager/etc/kubernetes/addons"
+        }
+      }
+    ]
+  }
+}
+

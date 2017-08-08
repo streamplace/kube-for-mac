@@ -60,95 +60,124 @@ users:
 - name: kube-for-mac
 ```
 
-## What is this `run-docker-kube-for-mac.sh` thingie?
+## What are these `lcl-k8s4m.sh` and `run-docker-kube-for-mac.sh` thingies?
 
-It's a handy shell script that fires up the whole thing for you.
+They are handy shell scripts to fire up K8s cluster from scratch, designed to account for the ever-evolving nature of Kubernetes. (Such as 1.7.0 that no longer creates any of the manifests / addons that 1.6.x and prior versions did.)
 
-And it is designed to account for the ever-evolving nature of Kubernetes.
-
-Such as 1.7.0 that no longer creates any of the manifests / addons that 1.6.x and prior versions did.
-
-First, get a watcher up and running in another window:
+First, get a watcher up and running in a second window:
 ```
 watch -n 4 -d kubectl get all --all-namespaces -o wide
 ```
 
-There will be no output until we start a Kubernetes cluster. So let's do that now with the v1.7.0 hacks:
+In your first window, we want to start Kubernetes. You can use either of the two scripts above, but generally the `lcl-k8s4m.sh` script is simpler. It defaults to the latest supported Kubernetes version (v1.7.3 as of this writing).
 ```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ ./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh start
+./lcl-k8s4m.sh start
+```
+
+That starts the whole cluster from scratch. You can watch the progress by switching to your second window and looking at Let's see a typical run:
+```
+MacBook-Pro:kube-for-mac l.abruce$ ./lcl-k8s4m.sh start
 Starting kube-for-mac...
 docker run --privileged -v /:/rootfs -v /Users:/Users --net=host \
-  --volume /Users/l.abruce/proj/git/github.com/andybrucenet/kube-for-mac/hacks/v1.7.0:/etc/hacks-in:ro \
+  --volume /Users/l.abruce/proj/git/src/github.com/andybrucenet/kube-for-mac/hacks/v1.7.3:/etc/hacks-in:ro \
   -d --name docker-kube-for-mac-start \
-  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.0/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro" \
-  -e K8S_VERSION=1.7.0 \
+  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.3/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro --volume /Users:/Users:rw" \
+  -e K8S_VERSION=1.7.3 \
   -e KUBELET_ARGS="--cgroups-per-qos=false --enforce-node-allocatable='' --cpu-cfs-quota=false" \
   -e K8S_HACKS="/etc/hacks-in/hacks.sh" \
+  -e K8S_DEBUG="1" \
   streamplace/kube-for-mac:latest
-9f8d1e5d3a28993785dba913da00387e32cb7cab3424ae3799c880336801f51f
-Wait for start: ..OK
+11caf3a986aad8020121d1175f18d934253cc0b5b8bc1273f2af790ef3180960
+Wait for start: .OK
 Wait for server: ..OK
-```
 
-This starts the basic set of required containers. Wait a couple of minutes and take a look at what got created:
-```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl get ns
-NAME          STATUS    AGE
-default       Active    1m
-kube-public   Active    1m
-kube-system   Active    1m
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl --namespace=kube-system get pods
-NAME                           READY     STATUS    RESTARTS   AGE
-k8s-etcd-127.0.0.1             1/1       Running   0          17s
-k8s-master-127.0.0.1           3/3       Running   0          13s
-k8s-proxy-127.0.0.1            1/1       Running   0          21s
-kube-addon-manager-127.0.0.1   1/1       Running   0          27s
-```
 
-*Whoa* - the above doesn't show any DNS or Dashboard. What the fudge?
-With K8s v1.7.0, things don't get auto-created like they used to. So we have an additional task to run:
-```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ ./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh custom source /etc/hacks-in/hacks.sh DEPLOY-ADDONS
+Wait for k8s controllers: .................OK
+Deploy DNS:
+
 Running custom kube-for-mac...
 docker run --rm --privileged -v /:/rootfs -v /Users:/Users --net=host \
-  --volume /Users/l.abruce/proj/git/github.com/andybrucenet/kube-for-mac/hacks/v1.7.0:/etc/hacks-in:ro \
+  --volume /Users/l.abruce/proj/git/src/github.com/andybrucenet/kube-for-mac/hacks/v1.7.3:/etc/hacks-in:ro \
   -d --name docker-kube-for-mac-custom \
-  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.0/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro" \
-  -e K8S_VERSION=1.7.0 \
+  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.3/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro --volume /Users:/Users:rw" \
+  -e K8S_VERSION=1.7.3 \
   -e KUBELET_ARGS="--cgroups-per-qos=false --enforce-node-allocatable='' --cpu-cfs-quota=false" \
   -e K8S_HACKS="/etc/hacks-in/hacks.sh" \
+  -e K8S_DEBUG="1" \
   streamplace/kube-for-mac:latest custom \
-  source /etc/hacks-in/hacks.sh DEPLOY-ADDONS
-1f11281e3c21965ecf4cac7e6ec03d5a7f84460031361503bab49cf5945b6a4f
+  source /etc/hacks-in/hacks.sh DEPLOY-DNS
+3321aa3cded16fc29c7cde5df01a7f4e419f160ce7f20b1803e11d162b7068bc
+..........OK
+Deploy Dashboard:
+
+Running custom kube-for-mac...
+docker run --rm --privileged -v /:/rootfs -v /Users:/Users --net=host \
+  --volume /Users/l.abruce/proj/git/src/github.com/andybrucenet/kube-for-mac/hacks/v1.7.3:/etc/hacks-in:ro \
+  -d --name docker-kube-for-mac-custom \
+  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.3/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro --volume /Users:/Users:rw" \
+  -e K8S_VERSION=1.7.3 \
+  -e KUBELET_ARGS="--cgroups-per-qos=false --enforce-node-allocatable='' --cpu-cfs-quota=false" \
+  -e K8S_HACKS="/etc/hacks-in/hacks.sh" \
+  -e K8S_DEBUG="1" \
+  streamplace/kube-for-mac:latest custom \
+  source /etc/hacks-in/hacks.sh DEPLOY-DASHBOARD
+647de4a30318877ac123b92c4de1a56390f110566899581865f89694bfa49420
+.........OK
+$HELM_HOME has been configured at /Users/l.abruce/.helm.
+
+Tiller (the helm server side component) has been installed into your Kubernetes Cluster.
+Happy Helming!
+Wait for helm tiller: ...OK
 ```
 
-DNS and the Dashboard will take a few minutes to initialize. You can see the progress by watching the Docker logs:
+### That's too much output! And what is that `helm` thing?
+
+So there are several steps to get Kubernetes working with the v1.7.x family:
+
+* Start `kubectl` - this is the main workhorse, which spawns the API Server, ETCD Server, Scheduler..these are all the "k8s controllers" mentioned above.
+* Deploy DNS / Dashboard - Once the Kubernetes controller servers are run, we deploy these "extra" elements that make for a successful Kubernetes install. As of v1.7.x, they aren't installed automatically by the `kubectl` deployment, so we run them manually.
+* Deploy `helm` - Helm (https://github.com/kubernetes/helm) is a tool for managing Kubernetes by using "charts". If you have `helm` package available on your client, we will deploy it automatically to the new Kubernetes cluster. (If you do *not* have `helm` package, no worries - we just won't deploy it.) In a related project, I use `helm` to install OpenStack via containers on my local kube-for-mac!
+
+As for the verbosity, if you would like more be sure to set the `DOCKER_KUBE_FOR_MAC_K8S_DEBUG` environment variable and we can give you more output :)
+
+### So what does it look like when I'm done?
+
+First, you can check out the results of your `watch ...` command above. Here's the list of deployed elements (took just a few minutes from zero-to-hero):
 ```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ docker logs -f docker-kube-for-mac-custom
-Wait for kube-addon-manager...
-OK
-Sleeping for 120 seconds...
-Deploy DNS...
-Wait: ...........OK
-Sleeping for 90 seconds...
-Deploy Dashboard: OK
+MacBook-Pro:poc l.abruce$ kubectl get all --all-namespaces
+NAMESPACE     NAME                                       READY     STATUS    RESTARTS   AGE
+kube-system   po/k8s-etcd-127.0.0.1                      1/1       Running   0          15m
+kube-system   po/k8s-master-127.0.0.1                    3/3       Running   0          15m
+kube-system   po/k8s-proxy-127.0.0.1                     1/1       Running   0          15m
+kube-system   po/kube-addon-manager-127.0.0.1            1/1       Running   0          15m
+kube-system   po/kube-dns-1994753994-gdjx1               3/3       Running   0          14m
+kube-system   po/kubernetes-dashboard-4062213060-v5rtl   1/1       Running   0          13m
+kube-system   po/tiller-deploy-3360264398-kkdxt          1/1       Running   0          13m
+
+NAMESPACE     NAME                       CLUSTER-IP   EXTERNAL-IP   PORT(S)         AGE
+default       svc/kubernetes             10.0.0.1     <none>        443/TCP         16m
+kube-system   svc/kube-dns               10.0.0.10    <none>        53/UDP,53/TCP   16m
+kube-system   svc/kubernetes-dashboard   10.0.0.81    <none>        80/TCP          16m
+kube-system   svc/tiller-deploy          10.0.0.55    <none>        44134/TCP       13m
+
+NAMESPACE     NAME                          DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+kube-system   deploy/kube-dns               1         1         1            1           14m
+kube-system   deploy/kubernetes-dashboard   1         1         1            1           13m
+kube-system   deploy/tiller-deploy          1         1         1            1           13m
+
+NAMESPACE     NAME                                 DESIRED   CURRENT   READY     AGE
+kube-system   rs/kube-dns-1994753994               1         1         1         14m
+kube-system   rs/kubernetes-dashboard-4062213060   1         1         1         13m
+kube-system   rs/tiller-deploy-3360264398          1         1         1         13m
 ```
 
-And now we have everything we need :)
-```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl --namespace=kube-system get pods
-NAME                                    READY     STATUS    RESTARTS   AGE
-k8s-etcd-127.0.0.1                      1/1       Running   0          6m
-k8s-master-127.0.0.1                    3/3       Running   0          6m
-k8s-proxy-127.0.0.1                     1/1       Running   0          6m
-kube-addon-manager-127.0.0.1            1/1       Running   0          6m
-kube-dns-1994753994-js1bx               3/3       Running   0          2m
-kubernetes-dashboard-2037206258-m8gvj   1/1       Running   0          4s
-```
+Assuming you understand the intricacies of `kubeconfig` (https://kubernetes.io/docs/tasks/access-application-cluster/authenticate-across-clusters-kubeconfig/), you can setup your calls to default to your shiny new local cluster like we did above.
 
-Let's run a simple container and verify that DNS works. (Which - just FYI - I cannot get to work with `kubeadm` on CentOS or Fedora. But does work here.)
+### Does this actually run anything?
+
+Let's run a simple container and verify that DNS works:
 ```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl run -i -t busybox --image=busybox --restart=Never
+MacBook-Pro:poc l.abruce$ kubectl run --rm -i -t busybox --image=busybox --restart=Never
 If you don't see a command prompt, try pressing enter.
 / # nslookup kubernetes
 Server:    10.0.0.10
@@ -156,76 +185,38 @@ Address 1: 10.0.0.10 kube-dns.kube-system.svc.cluster.local
 
 Name:      kubernetes
 Address 1: 10.0.0.1 kubernetes.default.svc.cluster.local
+/ # ping -c 1 google.com
+PING google.com (216.239.38.120): 56 data bytes
+64 bytes from 216.239.38.120: seq=0 ttl=37 time=0.612 ms
+
+--- google.com ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max = 0.612/0.612/0.612 ms
 / # exit
 ```
 
-Take a quick peak at the pods:
-```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl get pods --show-all
-NAME      READY     STATUS      RESTARTS   AGE
-busybox   0/1       Completed   0          18s
-```
+You should see that the pod was killed automatically (use of the `--rm` flag to `kubectl run`).
 
-Kill that pod:
-```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl delete po/busybox
-pod "busybox" deleted
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ kubectl get pods --show-all
-No resources found.
-```
+### How do I kill the cluster using the script?
 
-Alright, I'm spent. Let's kill them all:
+Alright, I'm spent. Let's kill everything:
 ```
-CloudraticSolutionsLLCs-MacBook-Pro:kube-for-mac l.abruce$ ./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh stop
+MacBook-Pro:kube-for-mac l.abruce$ ./lcl-k8s4m.sh stop
 Stopping kube-for-mac...
 docker run --privileged -v /:/rootfs -v /Users:/Users --net=host \
-  --volume /Users/l.abruce/proj/git/github.com/andybrucenet/kube-for-mac/hacks/v1.7.0:/etc/hacks-in:ro \
+  --volume /Users/l.abruce/proj/git/src/github.com/andybrucenet/kube-for-mac/hacks/v1.7.3:/etc/hacks-in:ro \
   -d --name docker-kube-for-mac-stop \
-  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.0/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro" \
-  -e K8S_VERSION=1.7.0 \
+  -e DOCKER_ARGS="--volume /etc/hacks/v1.7.3/kubelet/etc/kubernetes/manifests:/etc/kubernetes/manifests:ro --volume /Users:/Users:rw" \
+  -e K8S_VERSION=1.7.3 \
   -e KUBELET_ARGS="--cgroups-per-qos=false --enforce-node-allocatable='' --cpu-cfs-quota=false" \
   -e K8S_HACKS="/etc/hacks-in/hacks.sh" \
+  -e K8S_DEBUG="1" \
   streamplace/kube-for-mac:latest stop
-b5f15cd366d56b5f236a5124a145bb789a9fb5d4fac78c4168d420d508026e5c
-Wait for stop: ......OK
+ba64f1299f15d21739402193165f5607a7be68358adb3147f030c6bbd9997e1a
+Wait for stop: .......OK
 
->>>>>>>  Deleting Kubernetes cluster...
-kubelet
-k8s-proxy-1
-k8s-proxy-2
+[...much, much cruft...]
 
->>>>>>>  Deleting all kubernetes containers...
-k8s_busybox_busybox_default_062a5ef9-61a5-11e7-bfa3-b6f744b1340b_0
-k8s_POD_busybox_default_062a5ef9-61a5-11e7-bfa3-b6f744b1340b_0
-k8s_kubernetes-dashboard_kubernetes-dashboard-2037206258-m8gvj_kube-system_ea92787a-61a4-11e7-bfa3-b6f744b1340b_0
-k8s_POD_kubernetes-dashboard-2037206258-m8gvj_kube-system_ea92787a-61a4-11e7-bfa3-b6f744b1340b_0
-k8s_sidecar_kube-dns-1994753994-js1bx_kube-system_a35054fb-61a4-11e7-bfa3-b6f744b1340b_0
-k8s_dnsmasq_kube-dns-1994753994-js1bx_kube-system_a35054fb-61a4-11e7-bfa3-b6f744b1340b_0
-k8s_kubedns_kube-dns-1994753994-js1bx_kube-system_a35054fb-61a4-11e7-bfa3-b6f744b1340b_0
-k8s_POD_kube-dns-1994753994-js1bx_kube-system_a35054fb-61a4-11e7-bfa3-b6f744b1340b_0
-k8s_scheduler_k8s-master-127.0.0.1_kube-system_2067adabaa6980daef0907659b4a9544_0
-k8s_apiserver_k8s-master-127.0.0.1_kube-system_2067adabaa6980daef0907659b4a9544_0
-k8s_controller-manager_k8s-master-127.0.0.1_kube-system_2067adabaa6980daef0907659b4a9544_0
-k8s_etcd_k8s-etcd-127.0.0.1_kube-system_bd1728a15ee1a9086d495f51c96057ca_0
-k8s_kube-addon-manager_kube-addon-manager-127.0.0.1_kube-system_4c08b13eef6cddbcdd31605f3d9b08c6_0
-k8s_kube-proxy_k8s-proxy-127.0.0.1_kube-system_93847eaf8fd3e196f07d899037b1b143_0
-k8s_POD_k8s-master-127.0.0.1_kube-system_2067adabaa6980daef0907659b4a9544_0
-k8s_POD_k8s-etcd-127.0.0.1_kube-system_bd1728a15ee1a9086d495f51c96057ca_0
-k8s_POD_kube-addon-manager-127.0.0.1_kube-system_4c08b13eef6cddbcdd31605f3d9b08c6_0
-k8s_POD_k8s-proxy-127.0.0.1_kube-system_93847eaf8fd3e196f07d899037b1b143_0
-
->>>>>>>  Deleting kube-for-mac startup container...
-/docker-kube-for-mac-start
-9f8d1e5d3a28
-
->>>>>>>  Removing all kubelet mounts (account for ordering)
-Removing mount: /var/lib/kubelet/pods/ea92787a-61a4-11e7-bfa3-b6f744b1340b/volumes/kubernetes.io~secret/default-token-91ng7
-Removing mount: /var/lib/kubelet/pods/a35054fb-61a4-11e7-bfa3-b6f744b1340b/volumes/kubernetes.io~secret/kube-dns-token-9l4mq
-Removing mount: /var/lib/kubelet
-
->>>>>>>  Removing /var/lib/kubelet
-
->>>>>>>  Executing hack: '/etc/hacks-in/hacks.sh'
 Cleanup Docker Alpine folder...
 Remove our specific hacks folder...
 ```

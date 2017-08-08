@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# handle debug
+if [ x"$K8S_DEBUG" = x1 ] ; then
+  set -x
+fi
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 export CONTAINER_NAMES="kubelet k8s-proxy-1 k8s-proxy-2"

@@ -26,14 +26,13 @@ var run = function(cmd, args) {
 require("yargs")
   .command("start", "destroy your local kube-for-mac installation", argv => {
     run("docker rm -f /docker-kube-for-mac-start", { errorsAreOkay: true });
-    run("./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh start");
-    run(
-      "./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh custom source /etc/hacks-in/hacks.sh DEPLOY-ADDONS"
-    );
+    run("./hacks/v1.7.3/run ./run-docker-kube-for-mac.sh start");
+    run("./hacks/v1.7.3/run ./run-docker-kube-for-mac.sh custom source /etc/hacks-in/hacks.sh DEPLOY-DNS");
+    run("./hacks/v1.7.3/run ./run-docker-kube-for-mac.sh custom source /etc/hacks-in/hacks.sh DEPLOY-DASHBOARD");
     run("docker logs -f docker-kube-for-mac-custom", { errorsAreOkay: true });
   })
   .command("destroy", "start a local kube-for-mac installation", argv => {
-    run("./hacks/v1.7.0/run ./run-docker-kube-for-mac.sh stop");
+    run("./hacks/v1.7.3/run ./run-docker-kube-for-mac.sh stop");
   })
   .showHelpOnFail(true)
   .demandCommand()
