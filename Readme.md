@@ -1,3 +1,8 @@
+# DEPRECATED
+
+[Docker does this now](https://blog.docker.com/2018/01/docker-mac-kubernetes/). So... use that.
+
+Leaving everything else here for historical purposes.
 
 # kube-for-mac
 
